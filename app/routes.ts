@@ -9,5 +9,7 @@ export default [
   layout("layouts/main.tsx", [
     index("routes/dashboard.tsx"),
     route("/tasks", "routes/tasks.tsx"),
+    route("/tasks/new", "routes/task-new.tsx"),
+    route("/tasks/edit/:id", "routes/task-edit.tsx"),
   ]),
 ] satisfies RouteConfig;

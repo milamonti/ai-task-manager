@@ -1,3 +1,5 @@
+import TasksList from "~/features/tasks/tasks-list";
+
 export default function Tasks() {
-  return <h1 className="text-2xl font-bold">Tasks</h1>;
+  return <TasksList />;
 }
