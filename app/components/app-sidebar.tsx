@@ -48,9 +48,9 @@ const data = {
       icon: <ListCheckIcon />,
     },
     {
-      title: "Analytics",
-      url: "#",
-      icon: <ChartBarIcon />,
+      title: "Users",
+      url: "/users",
+      icon: <UsersIcon />,
     },
     {
       title: "Projects",

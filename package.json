@@ -14,6 +14,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource-variable/inter": "^5.2.8",
+    "@libsql/client": "^0.17.2",
     "@react-router/node": "7.13.2",
     "@react-router/serve": "7.13.2",
     "@tanstack/react-table": "^8.21.3",
