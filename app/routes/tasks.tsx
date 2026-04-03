@@ -1,4 +1,4 @@
-import TasksList from "~/features/tasks/tasks-list";
+import { TasksList } from "~/features/tasks/tasks-list";
 
 export function loader() {
   return {};
