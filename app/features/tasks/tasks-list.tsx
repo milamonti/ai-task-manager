@@ -52,15 +52,15 @@ export function TasksList() {
 
   return (
     <div className="rounded-md border">
-      <Table>
+      <Table className="table-fixed">
         <TableHeader>
           <TableRow>
-            <TableHead className="w-75">Título</TableHead>
-            <TableHead>Descrição</TableHead>
-            <TableHead className="w-25">Etapas</TableHead>
-            <TableHead className="w-30">Tempo Estimado</TableHead>
-            <TableHead className="w-30">Criada em</TableHead>
-            <TableHead className="w-30">Ações</TableHead>
+            <TableHead className="w-64">Título</TableHead>
+            <TableHead className="w-88">Descrição</TableHead>
+            <TableHead className="w-16">Etapas</TableHead>
+            <TableHead className="w-28">Tempo Estimado</TableHead>
+            <TableHead className="w-28">Criada em</TableHead>
+            <TableHead className="w-24">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -79,8 +79,22 @@ export function TasksList() {
 
               return (
                 <TableRow key={task.id}>
-                  <TableCell className="font-medium">{task.title}</TableCell>
-                  <TableCell>{truncateText(task.description, 110)}</TableCell>
+                  <TableCell className="font-medium">
+                    <span
+                      className="block max-w-64 truncate"
+                      title={task.title}
+                    >
+                      {task.title}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className="block max-w-88 truncate"
+                      title={task.description}
+                    >
+                      {truncateText(task.description, 110)}
+                    </span>
+                  </TableCell>
                   <TableCell>{stepsCount}</TableCell>
                   <TableCell>{task.estimated_time || "-"}</TableCell>
                   <TableCell>{formatDate(task.created_at)}</TableCell>
