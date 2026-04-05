@@ -1,7 +1,10 @@
 import { TasksList } from "~/features/tasks/tasks-list";
+import prisma from "../../prisma/prisma";
 
-export function loader() {
-  return {};
+export async function loader() {
+  return {
+    tasks: await prisma.task.findMany(),
+  };
 }
 
 export default function Tasks() {

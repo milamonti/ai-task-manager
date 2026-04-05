@@ -3,9 +3,20 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+const datasourceUrl = process.env["DATABASE_URL"]?.trim();
+
+if (!datasourceUrl) {
+  throw new Error(
+    "Defina DATABASE_URL (file:...) para executar comandos do Prisma CLI.",
+  );
+}
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
+  migrations: {
+    seed: "tsx prisma/seed.ts",
+  },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: datasourceUrl,
   },
 });

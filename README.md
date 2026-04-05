@@ -42,6 +42,25 @@ Create a production build:
 npm run build
 ```
 
+## Database
+
+Apply schema locally (SQLite):
+
+```bash
+npx prisma db push
+```
+
+Apply pending Prisma migrations on Turso:
+
+```bash
+npm run db:push:turso
+```
+
+Required environment variables for Turso:
+
+- `TURSO_DATABASE_URL`
+- `TURSO_AUTH_TOKEN`
+
 ## Deployment
 
 ### Docker Deployment

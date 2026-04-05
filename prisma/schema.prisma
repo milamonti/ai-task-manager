@@ -6,3 +6,41 @@ generator client {
 datasource db {
   provider = "sqlite"
 }
+
+model User {
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  age   Int?
+  name  String?
+  posts Post[]
+
+  @@map("users")
+}
+
+model Post {
+  id        Int     @id @default(autoincrement())
+  title     String
+  content   String?
+  published Boolean @default(false)
+  author_id Int
+  author    User    @relation(fields: [author_id], references: [id])
+
+  @@map("posts")
+}
+
+model Task {
+  id                        String   @id @default(uuid())
+  title                     String
+  description               String
+  steps                     String? // Stored as JSON string
+  estimated_time            String
+  implementation_suggestion String?
+  acceptance_criteria       String? // Stored as JSON string
+  suggested_tests           String? // Stored as JSON string
+  content                   String? // Combined markdown version
+  chat_history              String? // Stored as JSON string
+  created_at                DateTime @default(now())
+  updated_at                DateTime @updatedAt
+
+  @@map("tasks")
+}

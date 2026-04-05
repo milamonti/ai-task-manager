@@ -9,316 +9,105 @@ import {
 } from "~/components/ui/table";
 
 import { Button } from "~/components/ui/button";
+import { useLoaderData } from "react-router";
+import type { loader } from "~/routes/tasks";
+
+function parseJsonArray(value: string | null) {
+  if (!value) {
+    return [] as string[];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [] as string[];
+  }
+}
+
+function formatDate(value: Date | string) {
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
+function truncateText(text: string, maxLength = 80) {
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  return `${text.slice(0, maxLength)}...`;
+}
 
 export function TasksList() {
+  const { tasks } = useLoaderData<typeof loader>();
+
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-12.5">Status</TableHead>
             <TableHead className="w-75">Título</TableHead>
             <TableHead>Descrição</TableHead>
-            <TableHead className="w-37.5">Data de Entrega</TableHead>
-            <TableHead className="w-25">Prioridade</TableHead>
+            <TableHead className="w-25">Etapas</TableHead>
+            <TableHead className="w-30">Tempo Estimado</TableHead>
+            <TableHead className="w-30">Criada em</TableHead>
             <TableHead className="w-30">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow>
-            <TableCell>
-              <div className="h-4 w-4 rounded-full bg-green-500" />
-            </TableCell>
-            <TableCell className="font-medium">Project Planning</TableCell>
-            <TableCell>Create initial project roadmap and timeline</TableCell>
-            <TableCell>Apr 15, 2024</TableCell>
-            <TableCell>High</TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  title="Edit task"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  title="Delete task"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell>
-              <div className="h-4 w-4 rounded-full bg-slate-200" />
-            </TableCell>
-            <TableCell className="font-medium">Database Setup</TableCell>
-            <TableCell>Configure and initialize PostgreSQL database</TableCell>
-            <TableCell>Apr 16, 2024</TableCell>
-            <TableCell>High</TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  title="Edit task"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  title="Delete task"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell>
-              <div className="h-4 w-4 rounded-full bg-green-500" />
-            </TableCell>
-            <TableCell className="font-medium">API Documentation</TableCell>
-            <TableCell>
-              Write comprehensive API documentation using Swagger
-            </TableCell>
-            <TableCell>Apr 17, 2024</TableCell>
-            <TableCell>Medium</TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  title="Edit task"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  title="Delete task"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell>
-              <div className="h-4 w-4 rounded-full bg-slate-200" />
-            </TableCell>
-            <TableCell className="font-medium">User Authentication</TableCell>
-            <TableCell>Implement JWT-based authentication system</TableCell>
-            <TableCell>Apr 18, 2024</TableCell>
-            <TableCell>High</TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  title="Edit task"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  title="Delete task"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell>
-              <div className="h-4 w-4 rounded-full bg-slate-200" />
-            </TableCell>
-            <TableCell className="font-medium">UI Components</TableCell>
-            <TableCell>Create reusable UI component library</TableCell>
-            <TableCell>Apr 19, 2024</TableCell>
-            <TableCell>Medium</TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  title="Edit task"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  title="Delete task"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell>
-              <div className="h-4 w-4 rounded-full bg-green-500" />
-            </TableCell>
-            <TableCell className="font-medium">Testing Setup</TableCell>
-            <TableCell>Configure Jest and React Testing Library</TableCell>
-            <TableCell>Apr 20, 2024</TableCell>
-            <TableCell>Low</TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  title="Edit task"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  title="Delete task"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell>
-              <div className="h-4 w-4 rounded-full bg-slate-200" />
-            </TableCell>
-            <TableCell className="font-medium">CI/CD Pipeline</TableCell>
-            <TableCell>Set up GitHub Actions workflow</TableCell>
-            <TableCell>Apr 21, 2024</TableCell>
-            <TableCell>Medium</TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  title="Edit task"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  title="Delete task"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell>
-              <div className="h-4 w-4 rounded-full bg-slate-200" />
-            </TableCell>
-            <TableCell className="font-medium">
-              Performance Optimization
-            </TableCell>
-            <TableCell>Implement code splitting and lazy loading</TableCell>
-            <TableCell>Apr 22, 2024</TableCell>
-            <TableCell>Low</TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  title="Edit task"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  title="Delete task"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell>
-              <div className="h-4 w-4 rounded-full bg-slate-200" />
-            </TableCell>
-            <TableCell className="font-medium">Error Handling</TableCell>
-            <TableCell>Implement global error boundary and logging</TableCell>
-            <TableCell>Apr 23, 2024</TableCell>
-            <TableCell>Medium</TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  title="Edit task"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  title="Delete task"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell>
-              <div className="h-4 w-4 rounded-full bg-green-500" />
-            </TableCell>
-            <TableCell className="font-medium">Deployment</TableCell>
-            <TableCell>Configure production deployment on Vercel</TableCell>
-            <TableCell>Apr 24, 2024</TableCell>
-            <TableCell>High</TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  title="Edit task"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  title="Delete task"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
+          {tasks.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={6}
+                className="h-24 text-center text-muted-foreground"
+              >
+                Nenhuma tarefa encontrada.
+              </TableCell>
+            </TableRow>
+          ) : (
+            tasks.map((task) => {
+              const stepsCount = parseJsonArray(task.steps).length;
+
+              return (
+                <TableRow key={task.id}>
+                  <TableCell className="font-medium">{task.title}</TableCell>
+                  <TableCell>{truncateText(task.description, 110)}</TableCell>
+                  <TableCell>{stepsCount}</TableCell>
+                  <TableCell>{task.estimated_time || "-"}</TableCell>
+                  <TableCell>{formatDate(task.created_at)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title="Editar tarefa"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        title="Excluir tarefa"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
         </TableBody>
       </Table>
     </div>

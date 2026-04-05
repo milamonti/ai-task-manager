@@ -5,8 +5,14 @@ declare global {
   var prismaClient: PrismaClient | undefined;
 }
 
+const databaseUrl = process.env.DATABASE_URL ?? process.env.TURSO_DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error("Defina DATABASE_URL ou TURSO_DATABASE_URL.");
+}
+
 const adapter = new PrismaLibSql({
-  url: process.env.TURSO_DATABASE_URL!,
+  url: databaseUrl,
   authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
