@@ -15,7 +15,6 @@ import {
 } from "~/components/ui/sidebar";
 import {
   LayoutDashboardIcon,
-  ChartBarIcon,
   FolderIcon,
   UsersIcon,
   CameraIcon,
