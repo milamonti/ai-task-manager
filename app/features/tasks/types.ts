@@ -1,6 +1,6 @@
 export type ChatMessage = {
   id: string;
-  content: string;
+  content: string | FormDataEntryValue;
   role: "user" | "assistant";
-  timestamp: Date;
+  timestamp: Date | string;
 };

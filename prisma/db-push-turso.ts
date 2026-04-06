@@ -9,93 +9,38 @@ type MigrationDir = {
   sqlPath: string;
 };
 
-type AppliedMigration = {
-  migrationName: string;
-  checksum: string | null;
+type DatabaseObject = {
+  name: string;
+  type: "table" | "index" | "view" | "trigger";
+  sql: string | null;
 };
 
-function splitSqlStatements(sql: string): string[] {
-  const statements: string[] = [];
-  let current = "";
-  let quote: "'" | '"' | "`" | null = null;
-  let lineComment = false;
-  let blockComment = false;
+function quoteIdentifier(name: string): string {
+  return `"${name.replace(/"/g, '""')}"`;
+}
 
-  for (let i = 0; i < sql.length; i++) {
-    const char = sql[i];
-    const next = i + 1 < sql.length ? sql[i + 1] : "";
-
-    if (lineComment) {
-      current += char;
-      if (char === "\n") {
-        lineComment = false;
-      }
-      continue;
-    }
-
-    if (blockComment) {
-      current += char;
-      if (char === "*" && next === "/") {
-        current += "/";
-        i++;
-        blockComment = false;
-      }
-      continue;
-    }
-
-    if (!quote && char === "-" && next === "-") {
-      current += "--";
-      i++;
-      lineComment = true;
-      continue;
-    }
-
-    if (!quote && char === "/" && next === "*") {
-      current += "/*";
-      i++;
-      blockComment = true;
-      continue;
-    }
-
-    if (!quote && (char === "'" || char === '"' || char === "`")) {
-      quote = char;
-      current += char;
-      continue;
-    }
-
-    if (quote) {
-      current += char;
-
-      if (char === quote) {
-        // SQL escapes single and double quotes by doubling them.
-        if ((quote === "'" || quote === '"') && next === quote) {
-          current += next;
-          i++;
-          continue;
-        }
-        quote = null;
-      }
-      continue;
-    }
-
-    if (char === ";") {
-      const statement = current.trim();
-      if (statement.length > 0) {
-        statements.push(statement);
-      }
-      current = "";
-      continue;
-    }
-
-    current += char;
+function toSqlArg(
+  value: unknown,
+): string | number | bigint | boolean | Uint8Array | ArrayBuffer | null {
+  if (value == null) {
+    return null;
+  }
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "bigint" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+  if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
+    return value;
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
   }
 
-  const trailing = current.trim();
-  if (trailing.length > 0) {
-    statements.push(trailing);
-  }
-
-  return statements;
+  return JSON.stringify(value);
 }
 
 function computeChecksum(sql: string): string {
@@ -114,29 +59,255 @@ async function listMigrations(migrationsRoot: string): Promise<MigrationDir[]> {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-async function executeInTransaction(
+async function listDatabaseObjects(
   client: ReturnType<typeof createClient>,
-  statements: string[],
+): Promise<DatabaseObject[]> {
+  const result = await client.execute(`
+    SELECT name, type, sql
+    FROM sqlite_master
+    WHERE type IN ('table', 'index', 'view', 'trigger')
+      AND name NOT LIKE 'sqlite_%'
+    ORDER BY name
+  `);
+
+  return result.rows.map((row) => ({
+    name: String(row.name),
+    type: String(row.type) as DatabaseObject["type"],
+    sql: row.sql == null ? null : String(row.sql),
+  }));
+}
+
+async function dropDestinationObjects(
+  destination: ReturnType<typeof createClient>,
 ): Promise<void> {
-  await client.execute("BEGIN");
+  const destinationObjects = await listDatabaseObjects(destination);
+  const byType = {
+    trigger: destinationObjects.filter((object) => object.type === "trigger"),
+    view: destinationObjects.filter((object) => object.type === "view"),
+    index: destinationObjects.filter((object) => object.type === "index"),
+    table: destinationObjects.filter((object) => object.type === "table"),
+  };
+
+  for (const trigger of byType.trigger) {
+    await destination.execute(
+      `DROP TRIGGER IF EXISTS ${quoteIdentifier(trigger.name)}`,
+    );
+  }
+  for (const view of byType.view) {
+    await destination.execute(
+      `DROP VIEW IF EXISTS ${quoteIdentifier(view.name)}`,
+    );
+  }
+  for (const index of byType.index) {
+    await destination.execute(
+      `DROP INDEX IF EXISTS ${quoteIdentifier(index.name)}`,
+    );
+  }
+  for (const table of byType.table) {
+    await destination.execute(
+      `DROP TABLE IF EXISTS ${quoteIdentifier(table.name)}`,
+    );
+  }
+}
+
+async function copyTableRows(
+  source: ReturnType<typeof createClient>,
+  destination: ReturnType<typeof createClient>,
+  tableName: string,
+): Promise<number> {
+  const tableInfo = await source.execute(
+    `PRAGMA table_info(${quoteIdentifier(tableName)})`,
+  );
+  const columns = tableInfo.rows.map((row) => String(row.name));
+
+  if (columns.length === 0) {
+    return 0;
+  }
+
+  const data = await source.execute(
+    `SELECT * FROM ${quoteIdentifier(tableName)}`,
+  );
+
+  if (data.rows.length === 0) {
+    return 0;
+  }
+
+  const insertSql = `INSERT INTO ${quoteIdentifier(tableName)} (${columns
+    .map(quoteIdentifier)
+    .join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`;
+
+  for (const row of data.rows) {
+    const rowData = row as Record<string, unknown>;
+    const args = columns.map((column) => toSqlArg(rowData[column]));
+    await destination.execute({ sql: insertSql, args });
+  }
+
+  return data.rows.length;
+}
+
+async function resolveTableCopyOrder(
+  source: ReturnType<typeof createClient>,
+  tableNames: string[],
+): Promise<string[]> {
+  const tableSet = new Set(tableNames);
+  const dependencies = new Map<string, Set<string>>();
+  const reverseEdges = new Map<string, Set<string>>();
+
+  for (const tableName of tableNames) {
+    dependencies.set(tableName, new Set<string>());
+    reverseEdges.set(tableName, new Set<string>());
+  }
+
+  for (const tableName of tableNames) {
+    const fkInfo = await source.execute(
+      `PRAGMA foreign_key_list(${quoteIdentifier(tableName)})`,
+    );
+
+    for (const row of fkInfo.rows) {
+      const referencedTable = String(row.table);
+      if (tableSet.has(referencedTable)) {
+        dependencies.get(tableName)!.add(referencedTable);
+        reverseEdges.get(referencedTable)!.add(tableName);
+      }
+    }
+  }
+
+  const inDegree = new Map<string, number>();
+  for (const tableName of tableNames) {
+    inDegree.set(tableName, dependencies.get(tableName)!.size);
+  }
+
+  const queue = tableNames
+    .filter((tableName) => inDegree.get(tableName) === 0)
+    .sort((a, b) => a.localeCompare(b));
+  const ordered: string[] = [];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    ordered.push(current);
+
+    const dependents = Array.from(reverseEdges.get(current) ?? []).sort(
+      (a, b) => a.localeCompare(b),
+    );
+    for (const dependent of dependents) {
+      const nextInDegree = (inDegree.get(dependent) ?? 0) - 1;
+      inDegree.set(dependent, nextInDegree);
+      if (nextInDegree === 0) {
+        queue.push(dependent);
+        queue.sort((a, b) => a.localeCompare(b));
+      }
+    }
+  }
+
+  if (ordered.length === tableNames.length) {
+    return ordered;
+  }
+
+  const remaining = tableNames
+    .filter((tableName) => !ordered.includes(tableName))
+    .sort((a, b) => a.localeCompare(b));
+
+  return [...ordered, ...remaining];
+}
+
+async function mirrorLocalDatabaseToTurso(
+  source: ReturnType<typeof createClient>,
+  destination: ReturnType<typeof createClient>,
+): Promise<void> {
+  const sourceObjects = await listDatabaseObjects(source);
+  const sourceTables = sourceObjects
+    .filter(
+      (object) =>
+        object.type === "table" &&
+        object.sql &&
+        object.name !== "__turso_migrations",
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const sourceIndexes = sourceObjects
+    .filter((object) => object.type === "index" && object.sql)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const sourceViews = sourceObjects
+    .filter((object) => object.type === "view" && object.sql)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const sourceTriggers = sourceObjects
+    .filter((object) => object.type === "trigger" && object.sql)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const tableCopyOrder = await resolveTableCopyOrder(
+    source,
+    sourceTables.map((table) => table.name),
+  );
+
+  await destination.execute("PRAGMA foreign_keys=OFF");
   try {
-    for (const statement of statements) {
-      await client.execute(statement);
+    await dropDestinationObjects(destination);
+
+    for (const table of sourceTables) {
+      await destination.execute(table.sql!);
     }
-    await client.execute("COMMIT");
-  } catch (error) {
-    try {
-      await client.execute("ROLLBACK");
-    } catch {
-      // Ignore rollback error and throw original migration error.
+
+    for (const tableName of tableCopyOrder) {
+      const copied = await copyTableRows(source, destination, tableName);
+      if (copied > 0) {
+        console.log(`+ ${copied} registro(s) copiados para ${tableName}`);
+      }
     }
-    throw error;
+
+    for (const index of sourceIndexes) {
+      await destination.execute(index.sql!);
+    }
+    for (const view of sourceViews) {
+      await destination.execute(view.sql!);
+    }
+    for (const trigger of sourceTriggers) {
+      await destination.execute(trigger.sql!);
+    }
+  } finally {
+    await destination.execute("PRAGMA foreign_keys=ON");
+  }
+}
+
+async function refreshMigrationMetadata(
+  destination: ReturnType<typeof createClient>,
+  migrationsRoot: string,
+): Promise<void> {
+  const migrations = await listMigrations(migrationsRoot);
+
+  await destination.execute(`
+    CREATE TABLE IF NOT EXISTS __turso_migrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      migration_name TEXT NOT NULL UNIQUE,
+      checksum TEXT,
+      applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await destination.execute("DELETE FROM __turso_migrations");
+
+  for (const migration of migrations) {
+    const sql = await readFile(migration.sqlPath, "utf-8");
+    const checksum = computeChecksum(sql);
+    await destination.execute({
+      sql: "INSERT INTO __turso_migrations (migration_name, checksum) VALUES (?, ?)",
+      args: [migration.name, checksum],
+    });
   }
 }
 
 async function main() {
+  const localDatabaseUrl = process.env.DATABASE_URL?.trim();
   const url = process.env.TURSO_DATABASE_URL?.trim();
   const authToken = process.env.TURSO_AUTH_TOKEN?.trim();
+
+  if (!localDatabaseUrl) {
+    throw new Error("Defina DATABASE_URL apontando para o SQLite local.");
+  }
+
+  if (!localDatabaseUrl.startsWith("file:")) {
+    throw new Error(
+      "DATABASE_URL precisa usar o formato file:... para sincronizar local -> Turso.",
+    );
+  }
 
   if (!url) {
     throw new Error(
@@ -150,87 +321,19 @@ async function main() {
     );
   }
 
-  const client = createClient({ url, authToken });
+  const localClient = createClient({ url: localDatabaseUrl });
+  const tursoClient = createClient({ url, authToken });
   const migrationsRoot = path.resolve("prisma", "migrations");
 
-  await client.execute(`
-    CREATE TABLE IF NOT EXISTS __turso_migrations (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      migration_name TEXT NOT NULL UNIQUE,
-      checksum TEXT,
-      applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  const tableInfo = await client.execute(
-    "PRAGMA table_info('__turso_migrations')",
-  );
-  const hasChecksumColumn = tableInfo.rows.some(
-    (row) => String(row.name) === "checksum",
-  );
-  if (!hasChecksumColumn) {
-    await client.execute(
-      "ALTER TABLE __turso_migrations ADD COLUMN checksum TEXT",
-    );
+  try {
+    console.log("Sincronizando schema e dados do SQLite local para o Turso...");
+    await mirrorLocalDatabaseToTurso(localClient, tursoClient);
+    await refreshMigrationMetadata(tursoClient, migrationsRoot);
+  } finally {
+    localClient.close();
+    tursoClient.close();
   }
 
-  const existing = await client.execute(
-    "SELECT migration_name, checksum FROM __turso_migrations",
-  );
-  const appliedByName = new Map<string, AppliedMigration>();
-  for (const row of existing.rows) {
-    const migrationName = String(row.migration_name);
-    const checksum = row.checksum == null ? null : String(row.checksum);
-    appliedByName.set(migrationName, { migrationName, checksum });
-  }
-
-  const migrations = await listMigrations(migrationsRoot);
-
-  for (const migration of migrations) {
-    const sql = await readFile(migration.sqlPath, "utf-8");
-    const checksum = computeChecksum(sql);
-    const alreadyApplied = appliedByName.get(migration.name);
-
-    if (alreadyApplied) {
-      if (alreadyApplied.checksum && alreadyApplied.checksum !== checksum) {
-        throw new Error(
-          `Checksum divergente na migration '${migration.name}'. Nao altere migrations ja aplicadas; crie uma nova migration.`,
-        );
-      }
-      console.log(`- migration ja aplicada: ${migration.name}`);
-      continue;
-    }
-
-    const statements = splitSqlStatements(sql);
-
-    if (statements.length === 0) {
-      console.log(
-        `- migration vazia, marcada como aplicada: ${migration.name}`,
-      );
-    } else {
-      await executeInTransaction(client, statements);
-    }
-
-    await client.execute("BEGIN");
-    try {
-      await client.execute({
-        sql: "INSERT INTO __turso_migrations (migration_name, checksum) VALUES (?, ?)",
-        args: [migration.name, checksum],
-      });
-      await client.execute("COMMIT");
-    } catch (error) {
-      try {
-        await client.execute("ROLLBACK");
-      } catch {
-        // Ignore rollback error and throw original insert error.
-      }
-      throw error;
-    }
-
-    console.log(`+ migration aplicada no Turso: ${migration.name}`);
-  }
-
-  client.close();
   console.log("Sincronizacao com Turso concluida.");
 }
 
