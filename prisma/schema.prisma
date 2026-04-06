@@ -28,10 +28,23 @@ model Post {
   @@map("posts")
 }
 
+model Chat {
+  id         Int      @id @default(autoincrement())
+  title      String?
+  content    String?
+  task       Task?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("chats")
+}
+
 model Task {
   id                        String   @id @default(uuid())
   title                     String
   description               String
+  chat_id                   Int      @unique
+  chat                      Chat     @relation(fields: [chat_id], references: [id])
   steps                     String? // Stored as JSON string
   estimated_time            String
   implementation_suggestion String?

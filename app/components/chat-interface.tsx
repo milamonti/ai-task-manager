@@ -1,79 +1,23 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { Avatar } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
-import type React from "react";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { Send } from "lucide-react";
-
-type Message = {
-  id: string;
-  content: string;
-  role: "user" | "assistant";
-  timestamp: Date;
-};
+import type { ChatMessage } from "~/features/tasks/types";
+import { Form, useFetcher } from "react-router";
 
 export function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      content: "Olá! Descreva a tarefa!",
-      role: "assistant",
-      timestamp: new Date(),
-    },
-  ]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const handleSendMessage = async () => {
-    if (!input.trim()) return;
-
-    // Add user message
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: input,
-      role: "user",
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
-
-    // Simulate bot response after a delay
-    setTimeout(() => {
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: `Thanks for your message! This is a simulated response to: "${input}"`,
-        role: "assistant",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, botMessage]);
-      setIsLoading(false);
-    }, 1000);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
+  const fetcher = useFetcher();
+  const isLoading = fetcher.state !== "idle";
 
   return (
     <Card className="flex flex-col h-150 w-full border shadow-sm pb-0 pt-0">
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 p-4 h-96">
         <div className="space-y-4">
           {messages.map((message) => (
             <div
@@ -139,22 +83,16 @@ export function ChatInterface() {
       </ScrollArea>
 
       <div className="p-4 border-t mt-auto">
-        <div className="flex gap-2">
+        <fetcher.Form className="flex gap-2" action="/api/chat" method="POST">
           <Input
-            placeholder="Type a message..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
+            name="message"
+            placeholder="Descreva a tarefa..."
             className="flex-1"
           />
-          <Button
-            onClick={handleSendMessage}
-            disabled={!input.trim() || isLoading}
-            size="icon"
-          >
+          <Button type="submit" disabled={isLoading} size="icon">
             <Send className="h-4 w-4" />
           </Button>
-        </div>
+        </fetcher.Form>
       </div>
     </Card>
   );
