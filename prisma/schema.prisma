@@ -37,7 +37,6 @@ model Post {
 model Chat {
   id           String        @id @default(uuid())
   title        String?
-  content      String
   created_at   DateTime      @default(now())
   updated_at   DateTime      @updatedAt
   task         Task?

@@ -10,6 +10,7 @@ import { ScrollArea } from "~/components/ui/scroll-area";
 import { Check, Copy, Send } from "lucide-react";
 import { useFetcher, useLoaderData } from "react-router";
 import type { loader } from "~/routes/task-new";
+import type { ChatMessage } from "~/generated/prisma/client";
 
 function isLikelyMarkdown(text: string) {
   return /(\n|^)(#{1,6}\s|\d+\.\s|[-*+]\s|>\s)|```|`[^`]+`|\[[^\]]+\]\([^\)]+\)|\*\*[^*]+\*\*|_[^_]+_/m.test(
@@ -27,15 +28,17 @@ export function ChatInterface() {
   const [optimisticMessage, setOptimisticMessage] = useState("");
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
-  const optimisticMessages =
+  const optimisticMessages: (ChatMessage & { isOptimistic?: boolean })[] =
     optimisticMessage.trim().length > 0
       ? [
           ...messages,
           {
             id: "optimistic-message",
-            role: "user",
+            role: "user" as const,
             content: optimisticMessage,
-            timestamp: new Date().toISOString(),
+            created_at: new Date(),
+            updated_at: new Date(),
+            chat_id: chatId ?? "",
             isOptimistic: true,
           },
         ]
@@ -148,7 +151,7 @@ export function ChatInterface() {
                   {renderMessageContent(message.content as string | null)}
                   <div className="mt-1 flex items-center gap-2">
                     <p className="text-xs opacity-70">
-                      {new Date(message.timestamp).toLocaleString([], {
+                      {new Date(message.updated_at).toLocaleString([], {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}

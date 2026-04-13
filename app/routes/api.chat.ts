@@ -29,10 +29,13 @@ export async function action({ request }: Route.ActionArgs) {
       where: {
         id: chatId,
       },
+      include: {
+        chatMessages: true,
+      },
     });
 
     if (existingChat) {
-      const existingMessages: ChatMessage[] = JSON.parse(existingChat.content);
+      const existingMessages: ChatMessage[] = existingChat.chatMessages;
 
       const answer = {
         content:
