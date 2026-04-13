@@ -29,14 +29,9 @@ export async function action({ request }: Route.ActionArgs) {
       where: {
         id: chatId,
       },
-      include: {
-        chatMessages: true,
-      },
     });
 
     if (existingChat) {
-      const existingMessages: ChatMessage[] = existingChat.chatMessages;
-
       const answer = {
         content:
           (await getChatCompletion([aiMessage])) ??
@@ -44,23 +39,14 @@ export async function action({ request }: Route.ActionArgs) {
         role: Role.assistant,
       };
 
-      chat = await prisma.chat.update({
-        where: {
-          id: chatId,
-        },
-        data: {
-          content: JSON.stringify([...existingMessages, chatMessage, answer]),
-        },
-      });
-
       await prisma.chatMessage.createMany({
         data: [
           {
-            chat_id: chat.id,
+            chat_id: existingChat.id,
             ...chatMessage,
           },
           {
-            chat_id: chat.id,
+            chat_id: existingChat.id,
             ...answer,
           },
         ],
@@ -74,9 +60,7 @@ export async function action({ request }: Route.ActionArgs) {
       role: Role.assistant,
     };
     chat = await prisma.chat.create({
-      data: {
-        content: JSON.stringify([chatMessage, answer]),
-      },
+      data: {},
     });
 
     await prisma.chatMessage.createMany({
