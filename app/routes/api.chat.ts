@@ -2,7 +2,7 @@ import { redirect } from "react-router";
 import prisma from "../../prisma/prisma";
 import type { Route } from "./+types/api.chat";
 import { getChatCompletion } from "~/services/openai.server";
-import type { ChatMessage } from "~/generated/prisma/client";
+import { Role, type ChatMessage } from "~/generated/prisma/client";
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
@@ -13,14 +13,14 @@ export async function action({ request }: Route.ActionArgs) {
     throw new Response("Mensagem é obrigatória.", { status: 400 });
   }
 
-  const chatMessage: Partial<ChatMessage> = {
+  const chatMessage = {
     content: message,
-    role: "user",
+    role: Role.user,
   };
-  
+
   const aiMessage = {
-    role: chatMessage.role as ChatMessage["role"],
-    content: chatMessage.content as string,
+    role: chatMessage.role,
+    content: chatMessage.content,
   };
 
   let chat;
@@ -34,11 +34,11 @@ export async function action({ request }: Route.ActionArgs) {
     if (existingChat) {
       const existingMessages: ChatMessage[] = JSON.parse(existingChat.content);
 
-      const answer: Partial<ChatMessage> = {
+      const answer = {
         content:
           (await getChatCompletion([aiMessage])) ??
           "Desculpe, não consegui gerar uma resposta.",
-        role: "assistant",
+        role: Role.assistant,
       };
 
       chat = await prisma.chat.update({
@@ -54,23 +54,21 @@ export async function action({ request }: Route.ActionArgs) {
         data: [
           {
             chat_id: chat.id,
-            content: chatMessage.content as string,
-            role: chatMessage.role,
+            ...chatMessage,
           },
           {
             chat_id: chat.id,
-            content: answer.content as string,
-            role: answer.role,
+            ...answer,
           },
         ],
       });
     }
   } else {
-    const answer: Partial<ChatMessage> = {
+    const answer = {
       content:
         (await getChatCompletion([aiMessage])) ??
         "Desculpe, não consegui gerar uma resposta.",
-      role: "assistant",
+      role: Role.assistant,
     };
     chat = await prisma.chat.create({
       data: {
@@ -82,13 +80,11 @@ export async function action({ request }: Route.ActionArgs) {
       data: [
         {
           chat_id: chat.id,
-          content: chatMessage.content as string,
-          role: chatMessage.role,
+          ...chatMessage,
         },
         {
           chat_id: chat.id,
-          content: answer.content as string,
-          role: answer.role,
+          ...answer,
         },
       ],
     });
