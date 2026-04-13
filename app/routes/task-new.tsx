@@ -1,8 +1,8 @@
 import { TasksChatbot } from "~/features/tasks/tasks-chatbot";
 import type { Route } from "./+types/task-new";
-import type { ChatMessage } from "~/features/tasks/types";
 import prisma from "../../prisma/prisma";
 import { redirect } from "react-router";
+import type { ChatMessage } from "~/generated/prisma/client";
 
 function ensureUniqueMessageIds(messages: ChatMessage[]): ChatMessage[] {
   const seenIds = new Set<string>();
@@ -25,12 +25,22 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (chatId) {
     const chat = await prisma.chat.findUnique({
       where: { id: chatId },
+      include: { chatMessages: true },
     });
 
     if (!chat) {
       return redirect("/tasks/new");
     }
-    messages = ensureUniqueMessageIds(JSON.parse(chat?.content || "[]"));
+    messages = ensureUniqueMessageIds(
+      chat.chatMessages.map((msg) => ({
+        id: msg.id,
+        content: msg.content,
+        role: msg.role as "system" | "user" | "assistant",
+        created_at: msg.created_at,
+        updated_at: msg.updated_at,
+        chat_id: msg.chat_id,
+      })),
+    );
   }
 
   return { chatId, messages };

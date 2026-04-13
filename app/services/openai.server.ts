@@ -1,5 +1,5 @@
 import Openai from "openai";
-import type { ChatMessage } from "~/features/tasks/types";
+import type { ChatMessage } from "~/generated/prisma/client";
 
 const client = new Openai({
   apiKey: process.env["OPENAI_KEY"],

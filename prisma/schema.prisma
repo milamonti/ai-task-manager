@@ -7,6 +7,12 @@ datasource db {
   provider = "sqlite"
 }
 
+enum Role {
+  user
+  assistant
+  system
+}
+
 model User {
   id    Int     @id @default(autoincrement())
   email String  @unique
@@ -29,14 +35,27 @@ model Post {
 }
 
 model Chat {
-  id         String   @id @default(uuid())
-  title      String?
-  content    String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  task       Task?
+  id           String        @id @default(uuid())
+  title        String?
+  content      String
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
+  task         Task?
+  chatMessages ChatMessage[]
 
   @@map("chats")
+}
+
+model ChatMessage {
+  id         String   @id @default(uuid())
+  content    String
+  role       Role     @default(user)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  chat_id    String
+  chat       Chat     @relation(fields: [chat_id], references: [id])
+
+  @@map("chat_messages")
 }
 
 model Task {
