@@ -2,9 +2,7 @@ import { redirect } from "react-router";
 import prisma from "../../prisma/prisma";
 import type { Route } from "./+types/api.chat";
 import { getChatCompletion } from "~/services/openai.server";
-import type { ChatMessage, Role } from "~/generated/prisma/client";
-import type { ChatPayloadMessage } from "~/features/tasks/types";
-import { createMessageId } from "~/lib/utils";
+import type { ChatMessage } from "~/generated/prisma/client";
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
@@ -15,10 +13,14 @@ export async function action({ request }: Route.ActionArgs) {
     throw new Response("Mensagem é obrigatória.", { status: 400 });
   }
 
-  const chatMessage: ChatPayloadMessage = {
-    id: createMessageId(),
+  const chatMessage: Partial<ChatMessage> = {
     content: message,
     role: "user",
+  };
+  
+  const aiMessage = {
+    role: chatMessage.role as ChatMessage["role"],
+    content: chatMessage.content as string,
   };
 
   let chat;
@@ -32,10 +34,9 @@ export async function action({ request }: Route.ActionArgs) {
     if (existingChat) {
       const existingMessages: ChatMessage[] = JSON.parse(existingChat.content);
 
-      const answer: ChatPayloadMessage = {
-        id: createMessageId(),
+      const answer: Partial<ChatMessage> = {
         content:
-          (await getChatCompletion([chatMessage])) ??
+          (await getChatCompletion([aiMessage])) ??
           "Desculpe, não consegui gerar uma resposta.",
         role: "assistant",
       };
@@ -65,10 +66,9 @@ export async function action({ request }: Route.ActionArgs) {
       });
     }
   } else {
-    const answer: ChatPayloadMessage = {
-      id: createMessageId(),
+    const answer: Partial<ChatMessage> = {
       content:
-        (await getChatCompletion([chatMessage])) ??
+        (await getChatCompletion([aiMessage])) ??
         "Desculpe, não consegui gerar uma resposta.",
       role: "assistant",
     };

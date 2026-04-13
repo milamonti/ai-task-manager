@@ -1,4 +1,5 @@
 import Openai from "openai";
+import type { Role } from "~/generated/prisma/enums";
 
 const client = new Openai({
   apiKey: process.env["OPENAI_KEY"],
@@ -6,7 +7,7 @@ const client = new Openai({
 
 export async function getChatCompletion(
   messages: {
-    role: "user" | "assistant" | "system";
+    role: Role;
     content: string;
   }[],
 ): Promise<string | null> {
