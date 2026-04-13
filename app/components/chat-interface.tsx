@@ -79,7 +79,10 @@ export function ChatInterface() {
     inputRef.current?.focus();
   };
 
-  const handleCopyMessage = async (messageId: string, content: string | null) => {
+  const handleCopyMessage = async (
+    messageId: string,
+    content: string | null,
+  ) => {
     const textToCopy = typeof content === "string" ? content : String(content);
     try {
       await navigator.clipboard.writeText(textToCopy);
@@ -138,14 +141,11 @@ export function ChatInterface() {
                       : "bg-muted"
                   } ${
                     "isOptimistic" in message && message.isOptimistic
-                      ? "opacity-70"
+                      ? "opacity-50"
                       : ""
                   }`}
                 >
                   {renderMessageContent(message.content as string | null)}
-                  {"isOptimistic" in message && message.isOptimistic && (
-                    <p className="text-xs mt-1">aguardando..</p>
-                  )}
                   <div className="mt-1 flex items-center gap-2">
                     <p className="text-xs opacity-70">
                       {new Date(message.timestamp).toLocaleString([], {
