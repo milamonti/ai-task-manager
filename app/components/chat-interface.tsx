@@ -7,7 +7,7 @@ import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { ScrollArea } from "~/components/ui/scroll-area";
-import { Send } from "lucide-react";
+import { Check, Copy, Send } from "lucide-react";
 import { useFetcher, useLoaderData } from "react-router";
 import type { loader } from "~/routes/task-new";
 
@@ -25,6 +25,7 @@ export function ChatInterface() {
   const { chatId, messages } = useLoaderData<typeof loader>();
   const [messageInput, setMessageInput] = useState("");
   const [optimisticMessage, setOptimisticMessage] = useState("");
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
   const optimisticMessages =
     optimisticMessage.trim().length > 0
@@ -76,6 +77,17 @@ export function ChatInterface() {
     );
     setMessageInput("");
     inputRef.current?.focus();
+  };
+
+  const handleCopyMessage = async (messageId: string, content: string | null) => {
+    const textToCopy = typeof content === "string" ? content : String(content);
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setCopiedMessageId(messageId);
+      setTimeout(() => setCopiedMessageId(null), 1500);
+    } catch {
+      setCopiedMessageId(null);
+    }
   };
 
   const renderMessageContent = (content: string | null) => {
@@ -134,12 +146,36 @@ export function ChatInterface() {
                   {"isOptimistic" in message && message.isOptimistic && (
                     <p className="text-xs mt-1">aguardando..</p>
                   )}
-                  <p className="text-xs opacity-70 mt-1">
-                    {new Date(message.timestamp).toLocaleString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <p className="text-xs opacity-70">
+                      {new Date(message.timestamp).toLocaleString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                    {message.role !== "user" && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 opacity-70 hover:opacity-100"
+                        onClick={() =>
+                          handleCopyMessage(
+                            String(message.id),
+                            message.content as string | null,
+                          )
+                        }
+                        aria-label="Copiar resposta"
+                        title="Copiar resposta"
+                      >
+                        {copiedMessageId === String(message.id) ? (
+                          <Check className="h-3.5 w-3.5" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
