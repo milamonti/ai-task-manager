@@ -4,6 +4,18 @@ import type { ChatMessage } from "~/features/tasks/types";
 import prisma from "../../prisma/prisma";
 import { redirect } from "react-router";
 
+function ensureUniqueMessageIds(messages: ChatMessage[]): ChatMessage[] {
+  const seenIds = new Set<string>();
+
+  return messages.map((message, index) => {
+    const rawId = message.id ? String(message.id) : `message-${index}`;
+    const normalizedId = seenIds.has(rawId) ? `${rawId}-${index}` : rawId;
+
+    seenIds.add(normalizedId);
+    return { ...message, id: normalizedId };
+  });
+}
+
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const chatId = url.searchParams.get("chat");
@@ -18,7 +30,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     if (!chat) {
       return redirect("/tasks/new");
     }
-    messages = JSON.parse(chat?.content || "[]");
+    messages = ensureUniqueMessageIds(JSON.parse(chat?.content || "[]"));
   }
 
   return { chatId, messages };

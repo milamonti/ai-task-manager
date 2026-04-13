@@ -1,6 +1,6 @@
-export type ChatMessage = {
+import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+
+export type ChatMessage = ChatCompletionMessageParam & {
   id: string;
-  content: string | FormDataEntryValue;
-  role: "user" | "assistant";
   timestamp: Date | string;
 };

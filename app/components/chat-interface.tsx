@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 import { Avatar } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
@@ -14,6 +14,14 @@ export function ChatInterface() {
   const fetcher = useFetcher();
   const isLoading = fetcher.state !== "idle";
   const { chatId, messages } = useLoaderData<typeof loader>();
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   return (
     <Card className="flex flex-col h-150 w-full border shadow-sm pb-0 pt-0">
