@@ -49,7 +49,7 @@ export async function action({ request }: Route.ActionArgs) {
       const answer: MessagePayload = {
         id: createMessageId(),
         content:
-          (await getChatCompletion([chatMessage])) ??
+          (await getChatCompletion([chatMessage as ChatMessage])) ??
           "Desculpe, não consegui gerar uma resposta.",
         role: "assistant",
       };
@@ -82,7 +82,7 @@ export async function action({ request }: Route.ActionArgs) {
     const answer: MessagePayload = {
       id: createMessageId(),
       content:
-        (await getChatCompletion([chatMessage])) ??
+        (await getChatCompletion([chatMessage as ChatMessage])) ??
         "Desculpe, não consegui gerar uma resposta.",
       role: "assistant",
     };
