@@ -1,4 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import { Avatar } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
@@ -9,11 +11,34 @@ import { Send } from "lucide-react";
 import { useFetcher, useLoaderData } from "react-router";
 import type { loader } from "~/routes/task-new";
 
+function isLikelyMarkdown(text: string) {
+  return /(\n|^)(#{1,6}\s|\d+\.\s|[-*+]\s|>\s)|```|`[^`]+`|\[[^\]]+\]\([^\)]+\)|\*\*[^*]+\*\*|_[^_]+_/m.test(
+    text,
+  );
+}
+
 export function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const fetcher = useFetcher();
   const isLoading = fetcher.state !== "idle";
   const { chatId, messages } = useLoaderData<typeof loader>();
+  const [messageInput, setMessageInput] = useState("");
+  const [optimisticMessage, setOptimisticMessage] = useState("");
+
+  const optimisticMessages =
+    optimisticMessage.trim().length > 0
+      ? [
+          ...messages,
+          {
+            id: "optimistic-message",
+            role: "user",
+            content: optimisticMessage,
+            timestamp: new Date().toISOString(),
+            isOptimistic: true,
+          },
+        ]
+      : messages;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -21,13 +46,57 @@ export function ChatInterface() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [optimisticMessages]);
+
+  useEffect(() => {
+    if (!isLoading && optimisticMessage) {
+      setOptimisticMessage("");
+    }
+  }, [isLoading, optimisticMessage]);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, [isLoading]);
+
+  const handleSubmit = (event: React.SubmitEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmedMessage = messageInput.trim();
+    if (!trimmedMessage) return;
+
+    setOptimisticMessage(trimmedMessage);
+    fetcher.submit(
+      {
+        chatId: chatId ?? "",
+        message: trimmedMessage,
+      },
+      {
+        action: "/api/chat",
+        method: "POST",
+      },
+    );
+    setMessageInput("");
+    inputRef.current?.focus();
+  };
+
+  const renderMessageContent = (content: string | null) => {
+    const textContent = typeof content === "string" ? content : String(content);
+
+    if (!isLikelyMarkdown(textContent)) {
+      return <p className="text-sm whitespace-pre-wrap">{textContent}</p>;
+    }
+
+    return (
+      <div className="text-sm space-y-2 [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:bg-black/10 [&_pre]:p-3 [&_pre]:rounded-md [&_pre]:bg-black/10 [&_pre]:overflow-x-auto [&_h1]:text-base [&_h1]:font-semibold [&_h2]:text-sm [&_h2]:font-semibold [&_a]:underline">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{textContent}</ReactMarkdown>
+      </div>
+    );
+  };
 
   return (
     <Card className="flex flex-col h-150 w-full border shadow-sm pb-0 pt-0">
       <ScrollArea className="flex-1 p-4 h-96">
         <div className="space-y-4">
-          {messages.map((message) => (
+          {optimisticMessages.map((message) => (
             <div
               key={message.id}
               className={`flex ${
@@ -55,9 +124,16 @@ export function ChatInterface() {
                     message.role === "user"
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted"
+                  } ${
+                    "isOptimistic" in message && message.isOptimistic
+                      ? "opacity-70"
+                      : ""
                   }`}
                 >
-                  <p className="text-sm">{String(message.content)}</p>
+                  {renderMessageContent(message.content as string | null)}
+                  {"isOptimistic" in message && message.isOptimistic && (
+                    <p className="text-xs mt-1">aguardando..</p>
+                  )}
                   <p className="text-xs opacity-70 mt-1">
                     {new Date(message.timestamp).toLocaleString([], {
                       hour: "2-digit",
@@ -91,12 +167,15 @@ export function ChatInterface() {
       </ScrollArea>
 
       <div className="p-4 border-t mt-auto">
-        <fetcher.Form className="flex gap-2" action="/api/chat" method="POST">
+        <fetcher.Form className="flex gap-2" onSubmit={handleSubmit}>
           <input type="hidden" name="chatId" value={chatId ?? ""} />
           <Input
+            ref={inputRef}
             name="message"
             placeholder="Descreva a tarefa..."
             className="flex-1"
+            value={messageInput}
+            onChange={(event) => setMessageInput(event.target.value)}
           />
           <Button type="submit" disabled={isLoading} size="icon">
             <Send className="h-4 w-4" />
