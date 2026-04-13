@@ -2,23 +2,9 @@ import { redirect } from "react-router";
 import prisma from "../../prisma/prisma";
 import type { Route } from "./+types/api.chat";
 import { getChatCompletion } from "~/services/openai.server";
-import type { ChatMessage } from "~/generated/prisma/client";
-
-type MessagePayload = Omit<
-  ChatMessage,
-  "created_at" | "updated_at" | "chat_id"
->;
-
-function createMessageId() {
-  if (
-    typeof crypto !== "undefined" &&
-    typeof crypto.randomUUID === "function"
-  ) {
-    return crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
+import type { ChatMessage, Role } from "~/generated/prisma/client";
+import type { ChatPayloadMessage } from "~/features/tasks/types";
+import { createMessageId } from "~/lib/utils";
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
@@ -29,7 +15,7 @@ export async function action({ request }: Route.ActionArgs) {
     throw new Response("Mensagem é obrigatória.", { status: 400 });
   }
 
-  const chatMessage: MessagePayload = {
+  const chatMessage: ChatPayloadMessage = {
     id: createMessageId(),
     content: message,
     role: "user",
@@ -46,10 +32,10 @@ export async function action({ request }: Route.ActionArgs) {
     if (existingChat) {
       const existingMessages: ChatMessage[] = JSON.parse(existingChat.content);
 
-      const answer: MessagePayload = {
+      const answer: ChatPayloadMessage = {
         id: createMessageId(),
         content:
-          (await getChatCompletion([chatMessage as ChatMessage])) ??
+          (await getChatCompletion([chatMessage])) ??
           "Desculpe, não consegui gerar uma resposta.",
         role: "assistant",
       };
@@ -79,10 +65,10 @@ export async function action({ request }: Route.ActionArgs) {
       });
     }
   } else {
-    const answer: MessagePayload = {
+    const answer: ChatPayloadMessage = {
       id: createMessageId(),
       content:
-        (await getChatCompletion([chatMessage as ChatMessage])) ??
+        (await getChatCompletion([chatMessage])) ??
         "Desculpe, não consegui gerar uma resposta.",
       role: "assistant",
     };
