@@ -2,7 +2,7 @@ import { TasksChatbot } from "~/features/tasks/tasks-chatbot";
 import type { Route } from "./+types/task-new";
 import prisma from "../../prisma/prisma";
 import { redirect } from "react-router";
-import type { ChatMessage } from "~/generated/prisma/client";
+import { Role, type ChatMessage } from "~/generated/prisma/client";
 import type { TaskContent } from "~/features/tasks/types";
 
 function ensureUniqueMessageIds(messages: ChatMessage[]): ChatMessage[] {
@@ -36,15 +36,20 @@ export async function loader({ request }: Route.LoaderArgs) {
     messages = ensureUniqueMessageIds(
       chat.chatMessages.map((msg) => ({
         id: msg.id,
-        content: msg.content,
-        role: msg.role as "system" | "user" | "assistant",
+        content:
+          msg.role === Role.assistant
+            ? msg.content === "{}"
+              ? "🤷‍♂️ Sua pergunta gerou uma resposta inválida."
+              : "✅ Solicitação atendida! Verifique os detalhes da tarefa ao lado."
+            : msg.content,
+        role: msg.role as Role,
         created_at: msg.created_at,
         updated_at: msg.updated_at,
         chat_id: msg.chat_id,
       })),
     );
 
-    taskJson = messages[messages.length - 1]?.content;
+    taskJson = chat.chatMessages[messages.length - 1]?.content;
   }
 
   return {

@@ -29,13 +29,18 @@ export async function action({ request }: Route.ActionArgs) {
       where: {
         id: chatId,
       },
+      include: {
+        chatMessages: true,
+      },
     });
 
     if (existingChat) {
       const answer = {
         content:
-          (await getChatCompletion([aiMessage])) ??
-          "Desculpe, não consegui gerar uma resposta.",
+          (await getChatCompletion([
+            ...existingChat.chatMessages,
+            aiMessage,
+          ])) ?? "Desculpe, não consegui gerar uma resposta.",
         role: Role.assistant,
       };
 
