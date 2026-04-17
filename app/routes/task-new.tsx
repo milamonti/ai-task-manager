@@ -50,7 +50,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   return {
     chatId,
     messages,
-    task: JSON.parse(taskJson || "{}") as TaskContent,
+    task: taskJson ? (JSON.parse(taskJson) as TaskContent) : null,
   };
 }
 

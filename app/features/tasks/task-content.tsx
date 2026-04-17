@@ -9,11 +9,39 @@ import {
 
 import { Button } from "~/components/ui/button";
 import { ScrollArea } from "~/components/ui/scroll-area";
-import { useLoaderData } from "react-router";
+import { Skeleton } from "~/components/ui/skeleton";
+import { useLoaderData, useNavigation } from "react-router";
 import type { loader } from "~/routes/task-new";
 
 export function TaskContent() {
   const { task } = useLoaderData<typeof loader>();
+  const navigation = useNavigation();
+  const isLoading = navigation.state === "loading";
+
+  if (isLoading) {
+    return (
+      <section>
+        <ScrollArea className="h-150 pb-4">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Carregando tarefa...</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Skeleton className="h-5 w-2/3" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/5" />
+              </CardContent>
+            </Card>
+          </div>
+        </ScrollArea>
+        <div className="flex justify-end">
+          <Button disabled>Salvar Task</Button>
+        </div>
+      </section>
+    );
+  }
 
   if (!task || !task.title) {
     return null;
