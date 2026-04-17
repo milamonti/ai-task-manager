@@ -11,12 +11,7 @@ import { Check, Copy, Send } from "lucide-react";
 import { useFetcher, useLoaderData } from "react-router";
 import type { loader } from "~/routes/task-new";
 import type { ChatMessage } from "~/generated/prisma/client";
-
-function isLikelyMarkdown(text: string) {
-  return /(\n|^)(#{1,6}\s|\d+\.\s|[-*+]\s|>\s)|```|`[^`]+`|\[[^\]]+\]\([^\)]+\)|\*\*[^*]+\*\*|_[^_]+_/m.test(
-    text,
-  );
-}
+import { isLikelyMarkdown } from "~/lib/utils";
 
 export function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -207,7 +202,6 @@ export function ChatInterface() {
 
       <div className="p-4 border-t mt-auto">
         <fetcher.Form className="flex gap-2" onSubmit={handleSubmit}>
-          <input type="hidden" name="chatId" value={chatId ?? ""} />
           <Input
             ref={inputRef}
             name="message"

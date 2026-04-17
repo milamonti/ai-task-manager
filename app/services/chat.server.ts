@@ -1,5 +1,11 @@
 import Openai from "openai";
 import { Role } from "~/generated/prisma/enums";
+import prisma from "../../prisma/prisma";
+
+type Message = {
+  role: Role;
+  content: string;
+};
 
 const client = new Openai({
   apiKey: process.env["OPENAI_KEY"],
@@ -47,10 +53,7 @@ Saída JSON esperada:
 `;
 
 export async function getChatCompletion(
-  messages: {
-    role: Role;
-    content: string;
-  }[],
+  messages: Message[],
 ): Promise<string | null> {
   const systemMessage: {
     role: Role;
@@ -66,4 +69,23 @@ export async function getChatCompletion(
   });
 
   return completion.choices[0].message.content;
+}
+
+export async function createChatMessages(
+  chatId: string,
+  chatMessage: Message,
+  answer: Message,
+) {
+  await prisma.chatMessage.createMany({
+    data: [
+      {
+        chat_id: chatId,
+        ...chatMessage,
+      },
+      {
+        chat_id: chatId,
+        ...answer,
+      },
+    ],
+  });
 }

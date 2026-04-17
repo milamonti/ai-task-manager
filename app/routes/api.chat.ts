@@ -1,31 +1,34 @@
 import { redirect } from "react-router";
 import prisma from "../../prisma/prisma";
 import type { Route } from "./+types/api.chat";
-import { getChatCompletion } from "~/services/openai.server";
-import { Role, type ChatMessage } from "~/generated/prisma/client";
+import {
+  createChatMessages,
+  getChatCompletion,
+} from "~/services/chat.server";
+import { Role } from "~/generated/prisma/client";
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
-  const message = formData.get("message");
+  const userInput = formData.get("message");
   const chatId = formData.get("chatId") as string;
 
-  if (typeof message !== "string" || !message) {
+  if (typeof userInput !== "string" || !userInput) {
     throw new Response("Mensagem é obrigatória.", { status: 400 });
   }
 
-  const chatMessage = {
-    content: message,
+  const userMessage = {
+    content: userInput,
     role: Role.user,
   };
 
   const aiMessage = {
-    role: chatMessage.role,
-    content: chatMessage.content,
+    role: userMessage.role,
+    content: userMessage.content,
   };
 
   let chat;
   if (chatId) {
-    const existingChat = await prisma.chat.findUnique({
+    const chat = await prisma.chat.findUnique({
       where: {
         id: chatId,
       },
@@ -34,31 +37,18 @@ export async function action({ request }: Route.ActionArgs) {
       },
     });
 
-    if (existingChat) {
-      const answer = {
+    if (chat) {
+      const assistantMessage = {
         content:
-          (await getChatCompletion([
-            ...existingChat.chatMessages,
-            aiMessage,
-          ])) ?? "Desculpe, não consegui gerar uma resposta.",
+          (await getChatCompletion([...chat.chatMessages, aiMessage])) ??
+          "Desculpe, não consegui gerar uma resposta.",
         role: Role.assistant,
       };
 
-      await prisma.chatMessage.createMany({
-        data: [
-          {
-            chat_id: existingChat.id,
-            ...chatMessage,
-          },
-          {
-            chat_id: existingChat.id,
-            ...answer,
-          },
-        ],
-      });
+      await createChatMessages(chat.id, userMessage, assistantMessage);
     }
   } else {
-    const answer = {
+    const assistantMessage = {
       content:
         (await getChatCompletion([aiMessage])) ??
         "Desculpe, não consegui gerar uma resposta.",
@@ -68,18 +58,7 @@ export async function action({ request }: Route.ActionArgs) {
       data: {},
     });
 
-    await prisma.chatMessage.createMany({
-      data: [
-        {
-          chat_id: chat.id,
-          ...chatMessage,
-        },
-        {
-          chat_id: chat.id,
-          ...answer,
-        },
-      ],
-    });
+    await createChatMessages(chat.id, userMessage, assistantMessage);
 
     return redirect(`/tasks/new?chat=${chat.id}`);
   }
