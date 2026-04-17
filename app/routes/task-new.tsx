@@ -3,6 +3,7 @@ import type { Route } from "./+types/task-new";
 import prisma from "../../prisma/prisma";
 import { redirect } from "react-router";
 import type { ChatMessage } from "~/generated/prisma/client";
+import type { TaskContent } from "~/features/tasks/types";
 
 function ensureUniqueMessageIds(messages: ChatMessage[]): ChatMessage[] {
   const seenIds = new Set<string>();
@@ -21,6 +22,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   const chatId = url.searchParams.get("chat");
 
   let messages: ChatMessage[] = [];
+  let taskJson;
 
   if (chatId) {
     const chat = await prisma.chat.findUnique({
@@ -41,9 +43,15 @@ export async function loader({ request }: Route.LoaderArgs) {
         chat_id: msg.chat_id,
       })),
     );
+
+    taskJson = messages[messages.length - 1]?.content;
   }
 
-  return { chatId, messages };
+  return {
+    chatId,
+    messages,
+    task: JSON.parse(taskJson || "{}") as TaskContent,
+  };
 }
 
 export default function TaskNew() {

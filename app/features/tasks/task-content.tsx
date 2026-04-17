@@ -9,80 +9,76 @@ import {
 
 import { Button } from "~/components/ui/button";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { useLoaderData } from "react-router";
+import type { loader } from "~/routes/task-new";
 
 export function TaskContent() {
+  const { task } = useLoaderData<typeof loader>();
+
+  if (!task || !task.title) {
+    return null;
+  }
+
   return (
     <section>
       <ScrollArea className="h-150 pb-4">
         <div className="space-y-6">
-          {/* Estimated Time Card */}
           <Card>
             <CardHeader className="flex flex-row items-center gap-2">
               <Timer className="h-5 w-5" />
-              <CardTitle>Estimated Time</CardTitle>
+              <CardTitle>Tempo estimado</CardTitle>
             </CardHeader>
-            <CardContent>2 days</CardContent>
+            <CardContent>{task.estimated_time}</CardContent>
           </Card>
 
-          {/* Steps Card */}
           <Card>
             <CardHeader className="flex flex-row items-center gap-2">
               <ClipboardList className="h-5 w-5" />
-              <CardTitle>Steps</CardTitle>
+              <CardTitle>Etapas</CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="list-disc pl-6 space-y-2">
-                <li>Create a form component using React</li>
-                <li>Add field validation using a suitable library</li>
-                <li>Connect backend for user authentication</li>
-                <li>Persist sessions using SQLite</li>
-                <li>Test full login and logout flow</li>
+                {task.steps.map((step, index) => (
+                  <li key={index}>{step}</li>
+                ))}
               </ul>
             </CardContent>
           </Card>
 
-          {/* Suggested Tests Card */}
           <Card>
             <CardHeader className="flex flex-row items-center gap-2">
               <TestTube2 className="h-5 w-5" />
-              <CardTitle>Suggested Tests</CardTitle>
+              <CardTitle>Testes sugeridos</CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="list-disc pl-6 space-y-2">
-                <li>it('should render login form correctly')</li>
-                <li>it('should validate input fields')</li>
-                <li>it('should authenticate valid credentials')</li>
-                <li>it('should prevent access with invalid credentials')</li>
+                {task.suggested_tests.map((test, index) => (
+                  <li key={index}>{test}</li>
+                ))}
               </ul>
             </CardContent>
           </Card>
 
-          {/* Acceptance Criteria Card */}
           <Card>
             <CardHeader className="flex flex-row items-center gap-2">
               <CheckSquare className="h-5 w-5" />
-              <CardTitle>Acceptance Criteria</CardTitle>
+              <CardTitle>Critérios de aceitação</CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="list-disc pl-6 space-y-2">
-                <li>Login form displays properly with required fields</li>
-                <li>Invalid input is correctly flagged</li>
-                <li>Valid users can log in and maintain a session</li>
-                <li>Users are redirected upon login and logout</li>
+                {task.acceptance_criteria.map((criterion, index) => (
+                  <li key={index}>{criterion}</li>
+                ))}
               </ul>
             </CardContent>
           </Card>
 
-          {/* Implementation Suggestion Card */}
           <Card>
             <CardHeader className="flex flex-row items-center gap-2">
               <Lightbulb className="h-5 w-5" />
-              <CardTitle>Implementation Suggestion</CardTitle>
+              <CardTitle>Sugestão de implementação</CardTitle>
             </CardHeader>
-            <CardContent>
-              Use React Hook Form for input validation, Prisma ORM for managing
-              user data, and configure protected routes using React Router 7.
-            </CardContent>
+            <CardContent>{task.implementation_suggestion}</CardContent>
           </Card>
         </div>
       </ScrollArea>
