@@ -26,6 +26,20 @@ export function TaskContent() {
           <Card>
             <CardHeader className="flex flex-row items-center gap-2">
               <Timer className="h-5 w-5" />
+              <CardTitle>Título</CardTitle>
+            </CardHeader>
+            <CardContent>{task.title}</CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center gap-2">
+              <Timer className="h-5 w-5" />
+              <CardTitle>Descrição</CardTitle>
+            </CardHeader>
+            <CardContent>{task.description}</CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center gap-2">
+              <Timer className="h-5 w-5" />
               <CardTitle>Tempo estimado</CardTitle>
             </CardHeader>
             <CardContent>{task.estimated_time}</CardContent>
