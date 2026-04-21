@@ -10,11 +10,12 @@ import {
 import { Button } from "~/components/ui/button";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { Skeleton } from "~/components/ui/skeleton";
-import { useLoaderData, useNavigation } from "react-router";
+import { useFetcher, useLoaderData, useNavigation } from "react-router";
 import type { loader } from "~/routes/task-new";
 
 export function TaskContent() {
-  const { task } = useLoaderData<typeof loader>();
+  const { task, messageId, taskId } = useLoaderData<typeof loader>();
+  const fetcher = useFetcher();
   const navigation = useNavigation();
   const isLoading = navigation.state === "loading";
 
@@ -124,9 +125,13 @@ export function TaskContent() {
           </Card>
         </div>
       </ScrollArea>
-      <div className="flex justify-end">
-        <Button>Salvar Task</Button>
-      </div>
+      <fetcher.Form method="POST" className="flex justify-end">
+        <input type="hidden" name="messageId" value={messageId} />
+        <input type="hidden" name="taskId" value={taskId} />
+        <Button type="submit" disabled={fetcher.state !== "idle"}>
+          Salvar Task
+        </Button>
+      </fetcher.Form>
     </section>
   );
 }

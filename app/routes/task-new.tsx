@@ -17,17 +17,60 @@ function ensureUniqueMessageIds(messages: ChatMessage[]): ChatMessage[] {
   });
 }
 
+export async function action({ request, params }: Route.ActionArgs) {
+  const formData = await request.formData();
+  const messageId = formData.get("messageId") as string;
+  const taskId = formData.get("taskId") as string;
+
+  const message = await prisma.chatMessage.findUnique({
+    where: { id: messageId },
+  });
+
+  if (!message) {
+    return { error: 404, message: "Mensagem não encontrada" };
+  }
+
+  const content = JSON.parse(message.content);
+  const taskData = {
+    title: content.title,
+    description: content.description,
+    steps: JSON.stringify(content.steps),
+    acceptance_criteria: JSON.stringify(content.acceptance_criteria),
+    suggested_tests: JSON.stringify(content.suggested_tests),
+    estimated_time: content.estimated_time,
+    implementation_suggestion: content.implementation_suggestion,
+    chat_message_id: messageId,
+  };
+
+  if (taskId) {
+    await prisma.task.update({
+      where: { id: taskId },
+      data: taskData,
+    });
+  } else {
+    await prisma.task.create({
+      data: taskData,
+    });
+  }
+}
+
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const chatId = url.searchParams.get("chat");
 
   let messages: ChatMessage[] = [];
-  let taskJson;
+  let taskJson, messageId, taskId;
 
   if (chatId) {
     const chat = await prisma.chat.findUnique({
       where: { id: chatId },
-      include: { chatMessages: true },
+      include: {
+        chatMessages: {
+          include: {
+            task: true,
+          },
+        },
+      },
     });
 
     if (!chat) {
@@ -49,12 +92,17 @@ export async function loader({ request }: Route.LoaderArgs) {
       })),
     );
 
-    taskJson = chat.chatMessages[messages.length - 1]?.content;
+    const message = chat.chatMessages[messages.length - 1];
+    taskJson = message?.content;
+    messageId = message?.id;
+    taskId = message?.task?.id;
   }
 
   return {
     chatId,
     messages,
+    messageId,
+    taskId,
     task: taskJson ? (JSON.parse(taskJson) as TaskContent) : null,
   };
 }
