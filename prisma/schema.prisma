@@ -13,33 +13,11 @@ enum Role {
   system
 }
 
-model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  age   Int?
-  name  String?
-  posts Post[]
-
-  @@map("users")
-}
-
-model Post {
-  id        Int     @id @default(autoincrement())
-  title     String
-  content   String?
-  published Boolean @default(false)
-  author_id Int
-  author    User    @relation(fields: [author_id], references: [id])
-
-  @@map("posts")
-}
-
 model Chat {
   id           String        @id @default(uuid())
   title        String?
   created_at   DateTime      @default(now())
   updated_at   DateTime      @updatedAt
-  task         Task?
   chatMessages ChatMessage[]
 
   @@map("chats")
@@ -53,12 +31,13 @@ model ChatMessage {
   updated_at DateTime @updatedAt
   chat_id    String
   chat       Chat     @relation(fields: [chat_id], references: [id])
+  task       Task?
 
   @@map("chat_messages")
 }
 
 model Task {
-  id                        String   @id @default(uuid())
+  id                        String       @id @default(uuid())
   title                     String
   description               String
   steps                     String?
@@ -68,10 +47,10 @@ model Task {
   suggested_tests           String?
   content                   String?
   chat_history              String?
-  created_at                DateTime @default(now())
-  updated_at                DateTime @updatedAt
-  chat                      Chat     @relation(fields: [chat_id], references: [id])
-  chat_id                   String   @unique
+  created_at                DateTime     @default(now())
+  updated_at                DateTime     @updatedAt
+  chat_message              ChatMessage? @relation(fields: [chat_message_id], references: [id])
+  chat_message_id           String?      @unique
 
   @@map("tasks")
 }
